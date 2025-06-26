@@ -8,13 +8,15 @@ import * as Yup from "yup";
 import { FaRegEye } from "react-icons/fa";
 import { FaRegEyeSlash } from "react-icons/fa";
 import Link from "next/link";
-import GoogleIcon from "@/public/brands/Google.svg"
-import Image from "next/image";
+// import GoogleIcon from "@/public/brands/Google.svg"
+// import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Logo from "@/components/shared/Logo";
 import StrimzLogo from "@/public/logo/blueLogo.png"
 import { SignupFormInputValues } from "@/types/auth";
+import { defaultAxiosInstance } from "@/config/AxiosInstance";
+import { userManager } from "@/config/ManageUser";
 
 /**
  * Renders a sign up form that includes a logo, a heading, and a form
@@ -92,24 +94,43 @@ const FormInputs = () => {
         try {
             setIsSending(true);
 
-            const data = JSON.stringify(values);
+            const updatedValues = {
+                ...values,
+                type: "eth"
+            }
 
-            toast.success("sign up successful", {
-                position: "top-right",
-            });
+            const data = JSON.stringify(updatedValues);
 
-            console.log(data);
+            const response = await defaultAxiosInstance.post("auth/sign-up", data);
 
-            router.push("/verify-email");
+            if (response.data.success) {
+                resetForm();
+                toast.success(response.data.message, {
+                    position: "top-right",
+                });
+
+                // set user data in session storage
+                userManager.setUser(response.data.data, 1);
+
+                router.push("/verify-email");
+            }
+
 
         } catch (error: any) {
-            console.error("Failed to Signup:", error);
+            console.error("Failed to Signup:", error.response.data);
+
+            toast.error(error.response.data.message, {
+                position: "top-right",
+            })
+
+            userManager.clearSession(); // Clear any partial session
 
         } finally {
             setIsSending(false);
             resetForm()
         }
     };
+
     return (
         <Formik
             initialValues={initialValues}
@@ -184,12 +205,12 @@ const FormInputs = () => {
                             }
                         </button>
                         {/* divide */}
-                        <div className="w-full h-[1px] bg-[#E5E7EB]" />
+                        {/* <div className="w-full h-[1px] bg-[#E5E7EB]" /> */}
                         {/* google auth */}
-                        <button type="button" className='w-full h-[40px] flex justify-center gap-1.5 items-center rounded-[8px] bg-[#F9FAFB] text-[#58556A] font-poppins font-[500] shadow-[0px_-2px_4px_0px_#00000014_inset] border border-[#E5E7EB] text-[12px]'>
+                        {/* <button type="button" className='w-full h-[40px] flex justify-center gap-1.5 items-center rounded-[8px] bg-[#F9FAFB] text-[#58556A] font-poppins font-[500] shadow-[0px_-2px_4px_0px_#00000014_inset] border border-[#E5E7EB] text-[12px]'>
                             <Image src={GoogleIcon} width={12} height={12} alt="Google Icon" className='w-[18px] h-[18px]' priority quality={100} />
                             <span>Continue with Google</span>
-                        </button>
+                        </button> */}
 
                         {/* end */}
                         <div className="w-full flex flex-col items-center gap-4 mt-8">

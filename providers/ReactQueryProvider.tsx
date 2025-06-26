@@ -1,42 +1,21 @@
 "use client";
-import { userManager } from "@/config/ManageUser";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+
+// Set up queryClient
+const queryClient = new QueryClient()
 
 /**
- * Provider for React Query that also sets up the User Manager.
+ * The React Query provider for the entire application.
  *
- * It does the following:
- * 1. Initializes the User Manager.
- * 2. Adds a "beforeunload" event listener to clear the session when the user closes or reloads the page.
- * 3. Clears the session when the component is unmounted.
+ * This component wraps the entire application and provides a single instance of the
+ * `QueryClient` to all React Query hooks. This allows all hooks to share the same
+ * cache and configuration.
  *
- * @param children - The children of the component.
- * @returns A React Query client provider with the User Manager set up.
- */
+ * @example
+*/
 export default function ReactQueryProvider({ children }: { children: React.ReactNode }) {
-    const [queryClient] = useState(() => new QueryClient());
-
-    useEffect(() => {
-        // Store the cleanup function with proper type
-        const cleanup = userManager.initialize();
-
-        const handleBeforeUnload = () => userManager.clearSession();
-        window.addEventListener('beforeunload', handleBeforeUnload);
-
-        // Return cleanup wrapper
-        return () => {
-            // Call session cleanup function
-            cleanup();
-
-            // Remove beforeunload listener
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-
-            // Optional: Clear session on unmount
-            userManager.clearSession();
-        };
-    }, []);
 
     return (
         <QueryClientProvider client={queryClient}>

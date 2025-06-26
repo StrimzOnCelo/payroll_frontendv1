@@ -31,6 +31,10 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { CVSDataType, TableDataType } from "@/types/dashboard";
+import { isAddress, getAddress } from 'viem';
+import axiosInstanceWithToken from "@/config/AxiosInstance";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 interface StepTwoFormProps {
     data: {
@@ -38,7 +42,7 @@ interface StepTwoFormProps {
         token: string;
         frequency: string;
         startDate: Date | null;
-        paymentTime: string;
+        // paymentTime: string;
     };
     handleClick: () => void;
 }
@@ -100,18 +104,14 @@ const StepTwoForm = ({ data: StepOneData, handleClick }: StepTwoFormProps) => {
                 return false;
             }
 
-            // Optional: Add address validation if required
             // Check if address is valid
             if (row.address) {
-                // TODO to replace this check with ethers isAddress method
-                if (
-                    typeof row.address !== "string" || // Must be a string
-                    !row.address.startsWith("0x") ||  // Must start with '0x'
-                    row.address.length !== 42         // Must have 42 characters
-                ) {
-                    setError("Invalid data: 'address' must be a valid wallet address (42 characters, starting with '0x').");
+
+                if (typeof row.address !== 'string' || !isAddress(row.address)) {
+                    setError("Invalid data: 'address' must be a valid Ethereum wallet address.");
                     return false;
                 }
+                row.address = getAddress(row.address);
             } else {
                 setError("Invalid data: 'address' field is required.");
             }
@@ -243,10 +243,11 @@ const StepTwoForm = ({ data: StepOneData, handleClick }: StepTwoFormProps) => {
 
     const [isSending, setIsSending] = useState(false);
 
+    const queryClient = useQueryClient();
+
     const handleSubmit = async () => {
         const req = {
             name: StepOneData.payrollName,
-            plan: localStorage.getItem("strimzPlan"),
             frequency: StepOneData.frequency,
             token: StepOneData.token,
             start_date: (() => {
@@ -262,13 +263,27 @@ const StepTwoForm = ({ data: StepOneData, handleClick }: StepTwoFormProps) => {
         try {
             setIsSending(true);
 
-            console.log(formattedReq);
-            toast.success("payroll created", {
+            const response = await axiosInstanceWithToken.post("payroll", formattedReq);
+
+            if (response.data.success) {
+                toast.success(response.data.message, {
+                    position: "top-right",
+                });
+                console.log("data: ", response.data.data);
+
+                // Invalidate the payroll query to trigger refetch
+                queryClient.invalidateQueries({ queryKey: ["strimzPayrolls"] });
+
+                router.push("/user/payroll");
+            }
+
+        } catch (error: any) {
+            console.error("Failed to create payroll:", error.response?.data);
+
+            toast.error(error.response?.data?.message || "An error occurred", {
                 position: "top-right",
             });
-            router.push("/user/payroll");
-        } catch (error: any) {
-            console.error("Failed to create payroll:", error);
+
         } finally {
             setIsSending(false);
         }

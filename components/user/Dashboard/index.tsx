@@ -12,6 +12,10 @@ import Withdraw from './Withdraw'
 import baseIcon from "@/public/networks/base.webp"
 import { IoCopyOutline } from 'react-icons/io5'
 import { toast } from 'sonner'
+import { userManager } from '@/config/ManageUser'
+import { StrimzUD } from '@/types/auth'
+import useGetUSDCBalance from '@/controllers/useGetUSDCBalance'
+import useGetUSDTBalance from '@/controllers/useGetUSDTBalance'
 
 /**
  * UserDashboardHome component renders the main dashboard interface for the user.
@@ -30,12 +34,16 @@ import { toast } from 'sonner'
  */
 
 const UserDashboardHome = () => {
-    const [user, setUser] = useState<{ address?: `0x${string}` }>({});
+    const [user, setUser] = useState<Partial<StrimzUD>>();
+
+    const usdcBal = useGetUSDCBalance();
+    const usdtBal = useGetUSDTBalance();
 
     useEffect(() => {
-        const data = window.localStorage.getItem("strimzUser");
-        const parsedUser = data ? JSON.parse(data) : { address: "0xbe03CE9d6001D27BE41fc87e3E3f777d04e70Fe2" };
-        setUser(parsedUser);
+        const currentUser = userManager.getUser();
+        if (currentUser) {
+            setUser(currentUser);
+        }
     }, []);
 
     const shortenAddress = useMemo(() => {
@@ -84,7 +92,7 @@ const UserDashboardHome = () => {
                                 </span>
                                 usdc
                             </span>
-                            <h3 className="text-black font-[600] font-sora text-xl text-wrap">$ 0</h3>
+                            <h3 className="text-black font-[600] font-sora text-xl text-wrap">$ {usdcBal ? usdcBal : "0.00"}</h3>
                         </div>
 
                         {/* USDT */}
@@ -95,7 +103,7 @@ const UserDashboardHome = () => {
                                 </span>
                                 usdt
                             </span>
-                            <h3 className="text-black font-[600] font-sora text-xl text-wrap">$ 0</h3>
+                            <h3 className="text-black font-[600] font-sora text-xl text-wrap">$ {usdtBal ? usdtBal : "0.00"}</h3>
                         </div>
 
                         {/* Total Payout */}

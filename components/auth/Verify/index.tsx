@@ -12,6 +12,9 @@ import { useRouter } from "next/navigation"
 import { AiOutlineLoading3Quarters } from "react-icons/ai"
 import { RxCaretLeft } from "react-icons/rx";
 import { toast } from "sonner"
+import { userManager } from "@/config/ManageUser"
+import { StrimzUD } from "@/types/auth"
+import { defaultAxiosInstance } from "@/config/AxiosInstance"
 
 
 /**
@@ -25,23 +28,32 @@ import { toast } from "sonner"
  */
 const VerificationForm = () => {
     const router = useRouter()
-    const [user, setUser] = useState<{ email?: string }>({});
+    const [user, setUser] = useState<Partial<StrimzUD>>();
     const [isSending, setIsSending] = useState<boolean>(false)
 
     useEffect(() => {
-        const data = window.localStorage.getItem("strimzUser");
-        const parsedUser = data ? JSON.parse(data) : { email: "andrew@gmail.com" };
-        setUser(parsedUser);
-    }, []);
+        const currentUser = userManager.getUser();
+        if (currentUser) {
+            setUser(currentUser);
+        }
+    }, [router]);
 
     const handleResendOTP = async () => {
         setIsSending(true)
         try {
             const data = JSON.stringify({ email: user?.email });
-            console.log(data);
-        } catch (error: any) {
-            console.error(error);
+            const response = await defaultAxiosInstance.post("auth/send-verification", data);
 
+            if (response.data.success) {
+                toast.success(response.data.message, {
+                    position: "top-right",
+                });
+            }
+        } catch (error: any) {
+            console.error(error.response.data);
+            toast.error(error.response.data.message, {
+                position: "top-right",
+            })
         } finally {
             setIsSending(false)
         }
@@ -101,17 +113,27 @@ const FormInputs = () => {
     const validateOTP = async (otp: string) => {
         setIsLoading(true)
         try {
+            const response = await defaultAxiosInstance.get(`auth/verify/${otp}`);
 
-            console.log(otp);
-            if (otp === "1234") {
-                toast.success("user verified", {
+            if (response.data.success) {
+                toast.success(response.data.message, {
                     position: "top-right",
-                })
+                });
+
+                // set user data in session storage
+                userManager.setUser(response.data.data, 1);
+
+                setValue("")
+
                 router.push("/user");
             }
 
         } catch (error: any) {
-            console.error(error);
+            console.error(error.response.data);
+            toast.error(error.response.data.message, {
+                position: "top-right",
+            })
+            setValue("")
         } finally {
             setIsLoading(false)
         }
